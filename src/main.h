@@ -66,9 +66,10 @@ public:
                      adaptive::AdaptiveTree::AdaptationSet* adp,
                      const std::map<std::string, std::string>& media_headers,
                      DefaultRepresentationChooser* chooser,
-                     bool play_timeshift_buffer)
-    : adaptive::AdaptiveStream(tree, adp, media_headers, play_timeshift_buffer),
-  chooser_(chooser){};
+                     bool play_timeshift_buffer,
+                     size_t repId)
+    : adaptive::AdaptiveStream(tree, adp, media_headers, play_timeshift_buffer, repId),
+      chooser_(chooser){};
 
 protected:
   virtual bool download(const char* url, const std::map<std::string, std::string> &mediaHeaders) override;
@@ -116,17 +117,18 @@ public:
            adaptive::AdaptiveTree::AdaptationSet* adp,
            const std::map<std::string, std::string>& media_headers,
            DefaultRepresentationChooser* chooser,
-           bool play_timeshift_buffer)
-      :enabled(false)
-      ,encrypted(false)
-      ,mainId_(0)
-      ,current_segment_(0),
-        stream_(t, adp, media_headers, chooser, play_timeshift_buffer)
-      ,input_(0)
-      ,input_file_(0)
-      ,reader_(0)
-      ,segmentChanged(false)
-      ,valid(true)
+           bool play_timeshift_buffer,
+           size_t repId)
+      : enabled(false),
+        encrypted(false),
+        mainId_(0),
+        current_segment_(0),
+        stream_(t, adp, media_headers, chooser, play_timeshift_buffer, repId),
+        input_(0),
+        input_file_(0),
+        reader_(0),
+        segmentChanged(false),
+        valid(true)
     {
       memset(&info_, 0, sizeof(info_));
     };

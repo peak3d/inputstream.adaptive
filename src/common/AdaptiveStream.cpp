@@ -32,13 +32,15 @@ const size_t AdaptiveStream::MAXSEGMENTBUFFER = 10;
 AdaptiveStream::AdaptiveStream(AdaptiveTree& tree,
                                AdaptiveTree::AdaptationSet* adp,
                                const std::map<std::string, std::string>& media_headers,
-                               bool play_timeshift_buffer)
+                               bool play_timeshift_buffer,
+                               size_t repId)
   : thread_data_(nullptr),
     tree_(tree),
     observer_(nullptr),
     current_period_(tree_.current_period_),
     current_adp_(adp),
-    current_rep_(tree.ChooseRepresentation(adp)),
+    current_rep_(repId ? adp->representations_[adp->representations_.size() - repId]
+                       : tree.ChooseRepresentation(adp)),
     available_segment_buffers_(0),
     valid_segment_buffers_(0),
     media_headers_(media_headers),
@@ -89,7 +91,6 @@ void AdaptiveStream::StopWorker()
   stopped_ = true;
   // wait until last reading operation stopped
   // make sure download section in worker thread is done.
-  // Note that download is not locked by mutex_dl_.
   std::unique_lock<std::mutex> lckrw(thread_data_->mutex_rw_);
   while (worker_processing_)
     thread_data_->signal_rw_.wait(lckrw);
@@ -220,9 +221,12 @@ bool AdaptiveStream::start_stream()
     thread_data_->signal_dl_.wait(lckdl);
   }
 
-  stopped_ = !ResolveSegmentBase();
-  if (stopped_)
-    return false;
+  {
+    std::unique_lock<std::mutex> lckrw(thread_data_->mutex_rw_);
+    stopped_ = !ResolveSegmentBase(current_rep_, true);
+    if (stopped_)
+      return false;
+  }
 
   if (!play_timeshift_buffer_ && tree_.has_timeshift_buffer_ &&
       current_rep_->segments_.data.size() > 1)
@@ -469,17 +473,19 @@ bool AdaptiveStream::ensureSegment()
     if (nextSegment)
     {
       uint32_t nextsegmentPos = current_rep_->get_segment_pos(nextSegment);
+
+      const AdaptiveTree::Representation* newRep = tree_.ChooseRepresentation(current_adp_);
+      ResolveSegmentBase(newRep, false);
+
       for (size_t updPos(available_segment_buffers_); updPos < 5 /* TODO */; ++updPos)
       {
-        const AdaptiveTree::Segment* futureSegment =
-            current_rep_->get_segment(nextsegmentPos + updPos);
+        const AdaptiveTree::Segment* futureSegment = newRep->get_segment(nextsegmentPos + updPos);
 
         if (futureSegment)
         {
           segment_buffers_[updPos].segment.Copy(futureSegment);
-          segment_buffers_[updPos].segment_number =
-              current_rep_->startNumber_ + nextsegmentPos + updPos;
-          segment_buffers_[updPos].rep = current_rep_;
+          segment_buffers_[updPos].segment_number = newRep->startNumber_ + nextsegmentPos + updPos;
+          segment_buffers_[updPos].rep = newRep;
           ++available_segment_buffers_;
         }
         else
@@ -720,14 +726,16 @@ void AdaptiveStream::FixateInitialization(bool on)
   m_fixateInitialization = on && current_rep_->get_initialization() != nullptr;
 }
 
-bool AdaptiveStream::ResolveSegmentBase()
+bool AdaptiveStream::ResolveSegmentBase(const AdaptiveTree::Representation* rep, bool stopWorker)
 {
   stopped_ = false;
   /* If we have indexRangeExact SegmentBase, update SegmentList from SIDX */
-  if (current_rep_->flags_ & AdaptiveTree::Representation::SEGMENTBASE)
+  if (rep->flags_ & AdaptiveTree::Representation::SEGMENTBASE)
   {
-    //Make sure the worker thread is in idle
-    StopWorker();
+    // Make sure the worker thread is in idle
+    // Asssumtion: mutex_rw is already locked
+    if (stopWorker)
+      StopWorker();
 
     //We use the first segment as working buffer;
     std::move(segment_buffers_.begin(), segment_buffers_.begin() + available_segment_buffers_,
@@ -739,28 +747,28 @@ bool AdaptiveStream::ResolveSegmentBase()
     available_segment_buffers_ = 1;
 
     SEGMENTBUFFER& sb(segment_buffers_[0]);
-    sb.rep = current_rep_;
+    sb.rep = rep;
     sb.segment.url = nullptr;
     sb.segment_number = 0;
     sb.buffer.clear();
     segment_read_pos_ = 0;
 
-    if (current_rep_->indexRangeMin_ || !(current_rep_->get_initialization()))
+    if (rep->indexRangeMin_ || !(rep->get_initialization()))
     {
-      sb.segment.range_begin_ = current_rep_->indexRangeMin_;
-      sb.segment.range_end_ = current_rep_->indexRangeMax_;
+      sb.segment.range_begin_ = rep->indexRangeMin_;
+      sb.segment.range_end_ = rep->indexRangeMax_;
       sb.segment.startPTS_ = ~0ULL;
       sb.segment.pssh_set_ = 0;
     }
-    else if (current_rep_->get_initialization())
-      sb.segment = *current_rep_->get_initialization();
+    else if (rep->get_initialization())
+      sb.segment = *rep->get_initialization();
     else
       available_segment_buffers_ = 0;
 
     absolute_position_ = 0;
     m_fixateInitialization = true;
     if (prepareDownload() && download_segment() && parseIndexRange())
-      const_cast<AdaptiveTree::Representation*>(current_rep_)->flags_ &=
+      const_cast<AdaptiveTree::Representation*>(rep)->flags_ &=
           ~AdaptiveTree::Representation::SEGMENTBASE;
     else
       stopped_ = true;

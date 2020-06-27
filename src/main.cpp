@@ -2463,7 +2463,7 @@ bool Session::InitializeDRM()
         {
           Session::STREAM stream(*adaptiveTree_,
                                  adaptiveTree_->current_period_->psshSets_[ses].adaptation_set_,
-                                 media_headers_, representationChooser_, play_timeshift_buffer_);
+                                 media_headers_, representationChooser_, play_timeshift_buffer_, 0);
 
           stream.enabled = true;
           stream.stream_.start_stream();
@@ -2709,7 +2709,7 @@ bool Session::InitializePeriod()
     do
     {
       streams_.push_back(new STREAM(*adaptiveTree_, adp, media_headers_, representationChooser_,
-                                    play_timeshift_buffer_));
+                                    play_timeshift_buffer_, repId));
       STREAM& stream(*streams_.back());
 
       stream.info_.m_flags = INPUTSTREAM_INFO::FLAG_NONE;
