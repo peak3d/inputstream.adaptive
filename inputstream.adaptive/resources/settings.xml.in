@@ -13,6 +13,21 @@
           <default>0</default>
           <control type="edit" format="integer" />
         </setting>
+        <setting id="ASSUREDBUFFERDURATION" type="integer" label="30200">
+          <level>1</level>
+          <default>60</default>
+          <control type="edit" format="integer" />
+        </setting> 
+        <setting id="MAXBUFFERDURATION" type="integer" label="30201">
+          <level>1</level>
+          <default>120</default>
+          <control type="edit" format="integer" />
+        </setting>
+        <setting id="IGNOREWINDOWCHANGE" type="boolean" label="30202">
+          <level>1</level>
+          <default>true</default>
+          <control type="toggle" />
+        </setting> 
         <setting id="MAXRESOLUTION" type="integer" label="30110">
           <level>0</level>
           <default>0</default>

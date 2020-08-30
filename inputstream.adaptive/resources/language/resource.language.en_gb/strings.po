@@ -26,6 +26,21 @@ msgctxt "#30102"
 msgid "Max. Bandwidth (Bit/s)"
 msgstr ""
 
+# Assured buffer length duration (seconds)
+msgctxt "#30200"
+msgid "Assured Buffer Duration (sec)"
+msgstr ""
+
+# Max buffer length duration (seconds)
+msgctxt "#30201"
+msgid "Max Buffer Duration (sec)"
+msgstr ""
+
+# Ignore Window Display Resolution Change
+msgctxt "#30202"
+msgid "Ignore Window Change"
+msgstr ""
+
 # Absolute path to the folder containing the decrypters
 msgctxt "#30103"
 msgid "Decrypter path"

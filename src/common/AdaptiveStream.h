@@ -159,7 +159,12 @@ namespace adaptive
     // number of segmentbuffers whith valid segment, always >= valid_segment_buffers_
     size_t available_segment_buffers_;
     // number of segment_buffers which are downloaded / downloading
+    uint32_t assured_buffer_length_;
+    uint32_t max_buffer_length_; 
     size_t valid_segment_buffers_;
+    uint32_t rep_counter_;
+    AdaptiveTree::Representation *prev_rep_;
+
 
     std::map<std::string, std::string> media_headers_, download_headers_;
     std::size_t segment_read_pos_;

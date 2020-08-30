@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <cmath>
 
 using namespace adaptive;
 
@@ -51,7 +52,11 @@ AdaptiveStream::AdaptiveStream(AdaptiveTree& tree,
     lastMediaRenewal_(std::chrono::system_clock::now()),
     m_fixateInitialization(false),
     m_segmentFileOffset(0),
-    play_timeshift_buffer_(play_timeshift_buffer)
+    play_timeshift_buffer_(play_timeshift_buffer),
+    rep_counter_(1),
+    prev_rep_(0),
+    assured_buffer_length_(5),
+    max_buffer_length_(10)
 {
   segment_buffers_.resize(MAXSEGMENTBUFFER + 1);
   current_rep_->current_segment_ = nullptr;
@@ -220,6 +225,17 @@ bool AdaptiveStream::start_stream()
 {
   if (!current_rep_)
     return false;
+
+  assured_buffer_length_=current_rep_ ->assured_buffer_duration_;
+  assured_buffer_length_ = std::ceil( (assured_buffer_length_ * current_rep_->segtpl_.timescale)/ (float)current_rep_->segtpl_.duration );
+
+  max_buffer_length_=current_rep_ ->max_buffer_duration_;
+  max_buffer_length_ = std::ceil( (max_buffer_length_ * current_rep_->segtpl_.timescale)/ (float)current_rep_->segtpl_.duration );
+  assured_buffer_length_  = assured_buffer_length_ <4 ? 4:assured_buffer_length_;//for incorrect settings input
+  if(max_buffer_length_<=assured_buffer_length_)//for incorrect settings input
+    max_buffer_length_=assured_buffer_length_+4u;
+  
+  segment_buffers_.resize(max_buffer_length_+ 1);//TTHR
 
   if (!thread_data_)
   {
@@ -496,16 +512,28 @@ bool AdaptiveStream::ensureSegment()
     else
       nextSegment = current_rep_->get_next_segment(current_rep_->current_segment_);
 
+    if(prev_rep_== current_rep_)
+      rep_counter_++;
+    else
+    {
+      rep_counter_=1;
+      prev_rep_=current_rep_;
+    }
+
     if (nextSegment)
     {
       uint32_t nextsegmentPos = current_rep_->get_segment_pos(nextSegment);
-
-      AdaptiveTree::Representation* newRep = tree_.ChooseRepresentation(current_adp_);
+      AdaptiveTree::Representation* newRep = tree_.ChooseNextRepresentation(current_adp_,
+                                                                    segment_buffers_[valid_segment_buffers_-1].rep,
+                                                                    &valid_segment_buffers_,&available_segment_buffers_,
+                                                                    &assured_buffer_length_,
+                                                                    &max_buffer_length_,
+                                                                    rep_counter_);
       // Make sure, new representation has segments!
       ResolveSegmentBase(newRep, false); // For DASH
       tree_.prepareRepresentation(current_period_, current_adp_, newRep, false); // For HLS
 
-      for (size_t updPos(available_segment_buffers_); updPos < 5 /* TODO */; ++updPos)
+      for (size_t updPos(available_segment_buffers_); updPos < max_buffer_length_ ; ++updPos)
       {
         const AdaptiveTree::Segment* futureSegment = newRep->get_segment(nextsegmentPos + updPos);
 

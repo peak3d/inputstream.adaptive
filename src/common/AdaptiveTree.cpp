@@ -118,6 +118,8 @@ namespace adaptive
 
   uint32_t AdaptiveTree::estimate_segcount(uint64_t duration, uint32_t timescale)
   {
+    Log(LOGLEVEL_DEBUG,"estimate_segcount  duration=%llu , timescale=%u",duration , timescale);
+
     duration /= timescale;
     return static_cast<uint32_t>((overallSeconds_ / duration)*1.01);
   }

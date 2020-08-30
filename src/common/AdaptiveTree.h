@@ -177,6 +177,9 @@ public:
     uint16_t width_, height_;
     uint32_t fpsRate_, fpsScale_;
     float aspect_;
+
+    uint32_t assured_buffer_duration_;
+    uint32_t max_buffer_duration_;
     //Flags
     static const uint16_t BYTERANGE = 0;
     static const uint16_t INDEXRANGEEXACT = 1;
@@ -413,6 +416,13 @@ public:
   struct RepresentationChooser
   {
     virtual Representation* ChooseRepresentation(AdaptationSet* adp) = 0;
+  virtual Representation* ChooseNextRepresentation(AdaptationSet* adp , 
+                                                Representation* rep,  
+                                                size_t *available_segment_buffers_,
+                                                size_t *valid_segment_buffers_,
+                                                uint32_t *assured_buffer_length_,
+                                                uint32_t * max_buffer_length_, 
+                                                uint32_t rep_counter_) = 0;
   } *representation_chooser_ = nullptr;
 
   std::vector<Period*> periods_;
@@ -487,6 +497,18 @@ public:
   Representation* ChooseRepresentation(AdaptationSet* adp)
   {
     return representation_chooser_ ? representation_chooser_->ChooseRepresentation(adp) : nullptr;
+  };
+  Representation* ChooseNextRepresentation(AdaptationSet* adp, 
+                                      Representation* rep,  
+                                      size_t *available_segment_buffers_,
+                                      size_t *valid_segment_buffers_,
+                                      uint32_t *assured_buffer_length_,
+                                      uint32_t * max_buffer_length_, 
+                                      uint32_t rep_counter_)
+  {
+    return representation_chooser_ ? representation_chooser_->ChooseNextRepresentation(adp,rep,available_segment_buffers_,
+                                                                                      valid_segment_buffers_, assured_buffer_length_,
+                                                                                      max_buffer_length_, rep_counter_) : nullptr;
   };
 
 protected:
