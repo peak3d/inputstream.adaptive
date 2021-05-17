@@ -383,12 +383,10 @@ namespace adaptive
   {
     for (std::vector<Period*>::const_iterator bp(periods_.begin()), ep(periods_.end()); bp != ep; ++bp)
     {
-      std::stable_sort((*bp)->adaptationSets_.begin(), (*bp)->adaptationSets_.end(), AdaptationSet::compare);
-
-      // Merge AUDIO streams, some provider pass everythng in own Audio sets
+      // Merge VIDEO & AUDIO adaption sets
       for (std::vector<AdaptationSet*>::iterator ba((*bp)->adaptationSets_.begin()), ea((*bp)->adaptationSets_.end()); ba != ea;)
       {
-        if ((*ba)->type_ == AUDIO && ba + 1 != ea && AdaptationSet::mergeable(*ba, *(ba + 1)))
+        if (((*ba)->type_ == AUDIO || (*ba)->type_ == VIDEO) && ba + 1 != ea && AdaptationSet::mergeable(*ba, *(ba + 1)))
         {
           for (size_t i(1); i < (*bp)->psshSets_.size(); ++i)
             if ((*bp)->psshSets_[i].adaptation_set_ == *ba)
@@ -402,6 +400,8 @@ namespace adaptive
         else
           ++ba;
       }
+
+      std::stable_sort((*bp)->adaptationSets_.begin(), (*bp)->adaptationSets_.end(), AdaptationSet::compare);
 
       for (std::vector<AdaptationSet*>::const_iterator ba((*bp)->adaptationSets_.begin()), ea((*bp)->adaptationSets_.end()); ba != ea; ++ba)
       {

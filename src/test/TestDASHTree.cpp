@@ -114,7 +114,7 @@ TEST_F(DASHTreeTest, CalculateSegTplWithNoSlashes)
   OpenTestFile("mpd/segtpl_baseurl_noslashs.mpd", "https://foo.bar/initialpath/test.mpd", "");
 
   adaptive::AdaptiveTree::SegmentTemplate segtpl =
-      tree->periods_[0]->adaptationSets_[0]->representations_[0]->segtpl_;
+      tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_;
 
   EXPECT_EQ(segtpl.initialization, "https://foo.bar/guid.ism/dash/media-video=66000.dash");
   EXPECT_EQ(segtpl.media, "https://foo.bar/guid.ism/dash/media-video=66000-$Number$.m4s");
@@ -126,7 +126,7 @@ TEST_F(DASHTreeTest, CalculateSegTplWithMediaInitSlash)
   OpenTestFile("mpd/segtpl_slash_baseurl_noslash.mpd", "https://foo.bar/initialpath/test.mpd", "");
 
   adaptive::AdaptiveTree::SegmentTemplate segtpl =
-      tree->periods_[0]->adaptationSets_[0]->representations_[0]->segtpl_;
+      tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_;
 
   EXPECT_EQ(segtpl.initialization, "https://foo.bar/media-video=66000.dash");
   EXPECT_EQ(segtpl.media, "https://foo.bar/media-video=66000-$Number$.m4s");
@@ -138,7 +138,7 @@ TEST_F(DASHTreeTest, CalculateSegTplWithBaseURLSlash)
   OpenTestFile("mpd/segtpl_noslash_baseurl_slash.mpd", "https://foo.bar/initialpath/test.mpd", "");
 
   adaptive::AdaptiveTree::SegmentTemplate segtpl =
-      tree->periods_[0]->adaptationSets_[0]->representations_[0]->segtpl_;
+      tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_;
 
   EXPECT_EQ(segtpl.initialization, "https://foo.bar/guid.ism/dash/media-video=66000.dash");
   EXPECT_EQ(segtpl.media, "https://foo.bar/guid.ism/dash/media-video=66000-$Number$.m4s");
@@ -150,7 +150,7 @@ TEST_F(DASHTreeTest, CalculateSegTplWithBaseURLAndMediaInitSlash)
   OpenTestFile("mpd/segtpl_slash_baseurl_slash.mpd", "https://foo.bar/initialpath/test.mpd", "");
 
   adaptive::AdaptiveTree::SegmentTemplate segtpl =
-      tree->periods_[0]->adaptationSets_[0]->representations_[0]->segtpl_;
+      tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_;
 
   EXPECT_EQ(segtpl.initialization, "https://foo.bar/media-video=66000.dash");
   EXPECT_EQ(segtpl.media, "https://foo.bar/media-video=66000-$Number$.m4s");
@@ -160,7 +160,7 @@ TEST_F(DASHTreeTest, CalculateBaseURLInRepRangeBytes)
 {
   // Byteranged indexing
   OpenTestFile("mpd/segmentbase.mpd", "https://foo.bar/test.mpd", "");
-  EXPECT_EQ(tree->periods_[0]->adaptationSets_[0]->representations_[0]->url_,
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[0]->url_,
             "https://foo.bar/video/23.98p/r0/vid10.mp4");
 }
 
@@ -452,4 +452,23 @@ TEST_F(DASHTreeTest, CalculateRedirectSegTpl)
 
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_.initialization, "https://foo.bar/A48/init.mp4");
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_.media, "https://foo.bar/A48/$Number$.m4s");
+}
+
+TEST_F(DASHTreeTest, AdaptionSetSwitching)
+{
+  OpenTestFile("mpd/adaptation_set_switching.mpd", "", "");
+
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_.size(), 5);
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[0]->representations_[0]->id, "3");
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[0]->representations_[1]->id, "1");
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[0]->representations_[2]->id, "2");
+
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[0]->id, "4");
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[1]->id, "5");
+
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[2]->representations_[0]->id, "6");
+
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[3]->representations_[0]->id, "7");
+
+  EXPECT_EQ(tree->periods_[0]->adaptationSets_[4]->representations_[0]->id, "8");
 }

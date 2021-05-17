@@ -599,6 +599,25 @@ static void XMLCALL start(void* data, const char* el, const char** attr)
             attr += 2;
           }
         }
+        else if (strcmp(el, "SupplementalProperty") == 0)
+        {
+          const char *schemeIdUri(0), *value(0);
+
+          for (; *attr;)
+          {
+            if (strcmp((const char*)*attr, "schemeIdUri") == 0)
+              schemeIdUri = (const char*)*(attr + 1);
+            else if (strcmp((const char*)*attr, "value") == 0)
+              value = (const char*)*(attr + 1);
+            attr += 2;
+          }
+
+          if (schemeIdUri && value)
+          {
+            if (strcmp(schemeIdUri, "urn:mpeg:dash:adaptation-set-switching:2016") == 0)
+              dash->current_adaptationset_->switching_ids_ = split(value, ',');
+          }
+        }
         else if (dash->currentNode_ & MPDNODE_BASEURL)
         {
         }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MPD _xmlns:ns2="http://www.w3.org/1999/xlink" mediaPresentationDuration="PT1H45M47.904S" minBufferTime="PT10S" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:_xmlns="xmlns">
+  <Period duration="PT1H45M47.904S">
+    <!-- 3 below should merge -->
+    <AdaptationSet id="0" group="0" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="1" bandwidth="300000" codecs="avc1.64001e" frameRate="60/2" height="720" sar="1:1" width="1080" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="1,2"/>
+    </AdaptationSet>
+    <AdaptationSet id="1" group="0" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="2" bandwidth="1000000" codecs="avc1.64001e" frameRate="60/2" height="1080" sar="1:1" width="1920" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="0,2"/>
+    </AdaptationSet>
+    <AdaptationSet id="2" group="0" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="3" bandwidth="1000" codecs="avc1.64001e" frameRate="60/2" height="480" sar="1:1" width="720" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="0,1"/>
+    </AdaptationSet>
+
+    <!-- 2 below should merge -->
+    <AdaptationSet id="0" group="1" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="4" bandwidth="300000" codecs="avc1.64001e" frameRate="60/2" height="720" sar="1:1" width="1080" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="1"/>
+    </AdaptationSet>
+    <AdaptationSet id="1" group="1" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="5" bandwidth="1000000" codecs="avc1.64001e" frameRate="60/2" height="1080" sar="1:1" width="1920" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="0"/>
+    </AdaptationSet>
+
+    <!-- Wont merge as id 99 doesnt exist -->
+    <AdaptationSet id="2" group="1" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="6" bandwidth="1000" codecs="avc1.64001e" frameRate="60/2" height="480" sar="1:1" width="720" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="99"/>
+    </AdaptationSet>
+
+    <!-- Wont merge as id 1 doesnt list my id -->
+    <AdaptationSet id="2" group="1" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="7" bandwidth="1000" codecs="avc1.64001e" frameRate="60/2" height="480" sar="1:1" width="720" />
+      <SupplementalProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="1"/>
+    </AdaptationSet>
+
+    <!-- Wont merge as no adaptation-set-switching -->
+    <AdaptationSet id="3" group="1" contentType="video">
+      <SegmentTemplate duration="2" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0" />
+      <Representation id="8" bandwidth="1000" codecs="avc1.64001e" frameRate="60/2" height="480" sar="1:1" width="720" />
+    </AdaptationSet>
+  </Period>
+</MPD>

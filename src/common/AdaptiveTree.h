@@ -290,6 +290,7 @@ public:
     std::string codecs_;
     std::string audio_track_id_;
     std::string name_;
+    std::vector<std::string> switching_ids_;
     std::vector<Representation*> representations_;
     SPINCACHE<uint32_t> segment_durations_;
     SegmentTemplate segtpl_;
@@ -299,12 +300,10 @@ public:
       return *segment_durations_[pos];
     };
 
-    static bool compare(const AdaptationSet* a, const AdaptationSet *b)
+    static bool compare(const AdaptationSet* a, const AdaptationSet* b)
     {
       if (a->type_ != b->type_)
-        return a->type_ < b->type_;
-      if (a->language_ != b->language_)
-        return a->language_ < b->language_;
+        return false;
       if (a->default_ != b->default_)
         return a->default_;
 
@@ -347,29 +346,44 @@ public:
       return false;
     };
 
-    static bool mergeable(const AdaptationSet* a, const AdaptationSet *b)
+    static bool mergeable(const AdaptationSet* a, const AdaptationSet* b)
     {
-      if (a->type_ == b->type_
-        && a->timescale_ == b->timescale_
-        && a->duration_ == b->duration_
-        && a->startPTS_ == b->startPTS_
-        && a->startNumber_ == b->startNumber_
-        && a->impaired_ == b->impaired_
-        && a->original_ == b->original_
-        && a->default_ == b->default_
-        && a->language_ == b->language_
-        && a->mimeType_ == b->mimeType_
-        && a->base_url_ == b->base_url_
-        && a->audio_track_id_ == b->audio_track_id_
-        && a->name_ == b->name_
-        && a->id_ == b->id_
-        && a->group_ == b->group_
-        && compareCodecs(a->codecs_, b->codecs_))
+      if (a->type_ != b->type_)
+        return false;
+
+      if (a->type_ == VIDEO)
       {
-        return a->type_ == AUDIO
-          && a->representations_[0]->channelCount_ == b->representations_[0]->channelCount_
-          && compareCodecs(a->representations_[0]->codecs_, b->representations_[0]->codecs_);
+        if (a->group_ == b->group_
+          && std::find(a->switching_ids_.begin(), a->switching_ids_.end(), b->id_) != a->switching_ids_.end()
+          && std::find(b->switching_ids_.begin(), b->switching_ids_.end(), a->id_) != b->switching_ids_.end())
+        {
+          return true;
+        }
       }
+      else if (a->type_ == AUDIO)
+      {
+        if (a->timescale_ == b->timescale_
+          && a->duration_ == b->duration_
+          && a->startPTS_ == b->startPTS_
+          && a->startNumber_ == b->startNumber_
+          && a->impaired_ == b->impaired_
+          && a->original_ == b->original_
+          && a->default_ == b->default_
+          && a->language_ == b->language_
+          && a->mimeType_ == b->mimeType_
+          && a->base_url_ == b->base_url_
+          && a->audio_track_id_ == b->audio_track_id_
+          && a->name_ == b->name_
+          && a->id_ == b->id_
+          && a->group_ == b->group_
+          && compareCodecs(a->codecs_, b->codecs_)
+          && a->representations_[0]->channelCount_ == b->representations_[0]->channelCount_
+          && compareCodecs(a->representations_[0]->codecs_, b->representations_[0]->codecs_))
+        {
+          return true;
+        }
+      }
+
       return false;
     };
   }*current_adaptationset_;
