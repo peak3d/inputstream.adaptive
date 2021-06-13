@@ -359,9 +359,9 @@ WV_DRM::WV_DRM(const char* licenseURL, const AP4_DataBuffer &serverCert, const u
   if (serverCert.GetDataSize())
     wv_adapter->SetServerCertificate(0, serverCert.GetData(), serverCert.GetDataSize());
 
-  // For backward compatibility: If no | is found in URL, make the amazon convention out of it
+  // For backward compatibility: If no | is found in URL, use the most common working config
   if (license_url_.find('|') == std::string::npos)
-    license_url_ += "|Content-Type=application%2Fx-www-form-urlencoded|widevine2Challenge=B{SSM}&includeHdcpTestKeyInLicense=true|JBlicense;hdcpEnforcementResolutionPixels";
+    license_url_ += "|Content-Type=application%2Foctet-stream|R{SSM}|";
 
   //wv_adapter->GetStatusForPolicy();
   //wv_adapter->QueryOutputProtectionStatus();
