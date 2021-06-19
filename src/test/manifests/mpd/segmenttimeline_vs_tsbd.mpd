@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:cenc="urn:mpeg:cenc:2013" xmlns:mspr="urn:microsoft:playready" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:scte35="urn:scte:scte35:2013:xml" profiles="urn:mpeg:dash:profile:isoff-live:2011" availabilityStartTime="2016-05-04T00:00:00Z" maxSegmentDuration="PT6S" minBufferTime="PT12S" minimumUpdatePeriod="PT18S" publishTime="2021-06-09T14:20:31Z" suggestedPresentationDelay="PT32.12S" timeShiftBufferDepth="PT12H" type="dynamic">
+  <BaseURL>http://foo.bar</BaseURL>
+  <Period id="0" start="PT0S">
+    <AdaptationSet id="0" group="1" bitstreamSwitching="true" segmentAlignment="true" contentType="video" mimeType="video/mp4" startWithSAP="1" maxWidth="1920" maxHeight="1080" frameRate="50">
+      <SegmentTemplate timescale="90000" media="/$RepresentationID$/$Time$.mp4?t=dash-seg" initialization="/$RepresentationID$/init.mp4?t=dash-init" presentationTimeOffset="0">
+        <SegmentTimeline>
+          <S t="14479649308800" d="460800" r="8496"/>
+        </SegmentTimeline>
+      </SegmentTemplate>
+      <Representation id="1080p" codecs="avc1.64002a" bandwidth="8000000" width="1920" height="1080"/>
+    </AdaptationSet>
+  </Period>
+</MPD>

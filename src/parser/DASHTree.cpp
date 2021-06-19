@@ -1067,7 +1067,6 @@ static void XMLCALL start(void* data, const char* el, const char** attr)
     AddDuration(mpt, dash->overallSeconds_, 1);
     dash->has_overall_seconds_ = dash->overallSeconds_ > 0;
 
-    uint64_t overallsecs(dash->overallSeconds_ ? dash->overallSeconds_ + 60 : 86400);
     dash->minPresentationOffset = ~0ULL;
 
     dash->currentNode_ |= MPDNODE_MPD;
@@ -1519,6 +1518,23 @@ static void XMLCALL end(void* data, const char* el)
     }
     else if (strcmp(el, "MPD") == 0)
     {
+      if (dash->has_overall_seconds_)
+      {
+        uint64_t overallSeconds = 0;
+
+        // calculate overall seconds from SegmentTimeline
+        for (std::vector<AdaptiveTree::Period*>::iterator b(dash->periods_.begin());
+             b != dash->periods_.end(); ++b)
+        {
+          overallSeconds += (*b)->duration_ / (*b)->timescale_;
+        }
+
+        // override overall seconds from SegmentTimeline as
+        // sometimes timeShiftBufferDepth may contain an invalid value
+        if (overallSeconds)
+          dash->overallSeconds_ = overallSeconds;
+      }
+
       //cleanup periods
       for (std::vector<AdaptiveTree::Period*>::iterator b(dash->periods_.begin());
            b != dash->periods_.end();)

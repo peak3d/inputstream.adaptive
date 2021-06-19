@@ -453,3 +453,10 @@ TEST_F(DASHTreeTest, CalculateRedirectSegTpl)
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_.initialization, "https://foo.bar/A48/init.mp4");
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[0]->segtpl_.media, "https://foo.bar/A48/$Number$.m4s");
 }
+
+TEST_F(DASHTreeTest, OverrideTimeShiftBufferDepthWithSegmentTimeline)
+{
+  OpenTestFile("mpd/segmenttimeline_vs_tsbd.mpd", "http://foo.bar/stream.mpd", "");
+
+  EXPECT_EQ(tree->overallSeconds_, 43504);
+}
