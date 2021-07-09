@@ -37,6 +37,11 @@ public:
                                StreamType type) override;
 
   virtual uint64_t GetNowTime() { return time(0); };
+  virtual std::chrono::system_clock::time_point GetTimePointNowTime()
+  {
+    return std::chrono::system_clock::now();
+  };
+  virtual void SetLastUpdated(std::chrono::system_clock::time_point tm){};
   void SetUpdateInterval(uint32_t interval) { updateInterval_ = interval; };
   uint64_t pts_helper_, timeline_time_;
   uint32_t firstStartNumber_;

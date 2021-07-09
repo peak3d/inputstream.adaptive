@@ -1604,7 +1604,7 @@ void DASHTree::RefreshSegments(Period* period,
 {
   if ((type == VIDEO || type == AUDIO))
   {
-    lastUpdated_ = std::chrono::system_clock::now();
+    lastUpdated_ = GetTimePointNowTime();
     RefreshUpdateThread();
     RefreshLiveSegments();
   }
@@ -1751,11 +1751,23 @@ void DASHTree::RefreshLiveSegments()
                   if ((*br)->flags_ & DASHTree::Representation::TIMELINE)
                   {
                     uint64_t search_pts = (*br)->segments_[0]->range_begin_;
+                    uint64_t misaligned = 0;
                     for (const auto& s : (*brd)->segments_.data)
                     {
-                      if (s.range_begin_ >= search_pts)
+                      if (misaligned)
+                      {
+                        uint64_t ptsDiff = s.range_begin_ - (&s - 1)->range_begin_;
+                        // our misalignment is small ( < 2%), let's decrement the start number
+                        if (misaligned < (ptsDiff * 2 / 100))
+                          --(*brd)->startNumber_;
                         break;
-                      ++(*brd)->startNumber_;
+                      }
+                      if (s.range_begin_ == search_pts)
+                        break;
+                      else if (s.range_begin_ > search_pts)
+                        misaligned = search_pts - (&s - 1)->range_begin_;
+                      else 
+                        ++(*brd)->startNumber_;
                     }
                   }
                   else if ((*br)->segments_[0]->startPTS_ == (*brd)->segments_[0]->startPTS_)

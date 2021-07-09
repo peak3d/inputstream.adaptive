@@ -43,12 +43,15 @@ protected:
     testHelper::lastDownloadUrl.clear();
     DASHTreeTest::SetUp();
     videoStream = new TestAdaptiveStream(*tree, adaptive::AdaptiveTree::StreamType::VIDEO);
+    audioStream = new TestAdaptiveStream(*tree, adaptive::AdaptiveTree::StreamType::AUDIO);
   }
 
   void TearDown() override
   {
     delete videoStream;
+    delete audioStream;
     videoStream = nullptr;
+    audioStream = nullptr;
     DASHTreeTest::TearDown();
   }
 
@@ -71,9 +74,14 @@ protected:
         downloadedUrls.push_back(testHelper::lastDownloadUrl);
       else
         break;
+    // Decrement last updated time so live manifest will always refresh on each segment
+    // in order to test manifest update changes
+    tree->SetLastUpdated(std::chrono::system_clock::now() - std::chrono::seconds(2));
+    stream->SetLastUpdated(std::chrono::system_clock::now() - std::chrono::seconds(2));
   }
 
   TestAdaptiveStream* videoStream;
+  TestAdaptiveStream* audioStream;
   std::vector<std::string> downloadedUrls;
   std::map<std::string, std::string> mediaHeaders;
   unsigned char buf[16];
@@ -469,4 +477,26 @@ TEST_F(DASHTreeTest, CalculateReprensentationBaseURL)
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[1]->segtpl_.media, "https://foo.bar/mpd/slices2/B$Number%08d$.m4f");
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[2]->segtpl_.initialization, "https://foo.bar/mpd/slices2/C_init.mp4");
   EXPECT_EQ(tree->periods_[0]->adaptationSets_[1]->representations_[2]->segtpl_.media, "https://foo.bar/mpd/slices2/C$Number%08d$.m4f");
+}
+
+TEST_F(DASHTreeAdaptiveStreamTest, MisalignedSegmentTimeline)
+{
+  OpenTestFile("mpd/bad_segtimeline_1.mpd", "https://foo.bar/placeholders.mpd", "");
+  audioStream->prepare_stream(tree->current_period_->adaptationSets_[1], 0, 0, 0, 0, 0, 0, 0,
+                              mediaHeaders);
+  audioStream->start_stream(~0, 0, 0, false);
+
+  ReadSegments(audioStream, 16, 1);
+
+  SetFileName(testHelper::testFile, "mpd/bad_segtimeline_2.mpd");
+  ReadSegments(audioStream, 16, 1);
+  EXPECT_EQ(tree->current_period_->adaptationSets_[1]->representations_[0]->startNumber_, 3);
+
+  SetFileName(testHelper::testFile, "mpd/bad_segtimeline_3.mpd");
+  ReadSegments(audioStream, 16, 1);
+  EXPECT_EQ(tree->current_period_->adaptationSets_[1]->representations_[0]->startNumber_, 4);
+
+  SetFileName(testHelper::testFile, "mpd/bad_segtimeline_4.mpd");
+  ReadSegments(audioStream, 16, 1);
+  EXPECT_EQ(tree->current_period_->adaptationSets_[1]->representations_[0]->startNumber_, 5);
 }
