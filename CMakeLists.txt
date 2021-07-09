@@ -76,17 +76,10 @@ endif()
 add_definitions(-DUNICODE -D_UNICODE)
 
 add_subdirectory(lib/mpegts)
-
+add_subdirectory(wvdecrypter)
 add_subdirectory(lib/webm_parser)
 
-if(CORE_SYSTEM_NAME STREQUAL ios OR CORE_SYSTEM_NAME STREQUAL darwin_embedded)
-  set(BENTOUSESTCFS 1)
-  add_subdirectory(lib/libbento4)
-else()
-  add_subdirectory(wvdecrypter)
-  set(ADP_ADDITIONAL_BINARY $<TARGET_FILE:ssd_wv>)
-endif()
-
+set(ADP_ADDITIONAL_BINARY $<TARGET_FILE:ssd_wv>)
 set(DECRYPTERPATH "special://home/cdm")
 
 list(APPEND DEPLIBS bento4)
