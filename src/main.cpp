@@ -1246,6 +1246,7 @@ public:
   bool IsEncrypted() const override
   {
     return (m_decrypterCaps.flags & SSD::SSD_DECRYPTER::SSD_CAPS::SSD_SECURE_PATH) != 0 &&
+           (m_decrypterCaps.flags & SSD::SSD_DECRYPTER::SSD_CAPS::SSD_SECURE_DECODER) != 0 &&
            m_decrypter != nullptr;
   };
   bool GetInformation(kodi::addon::InputstreamInfo& info) override
