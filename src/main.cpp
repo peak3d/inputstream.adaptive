@@ -1429,7 +1429,7 @@ protected:
     if (m_singleSampleDecryptor && m_codecHandler)
       m_singleSampleDecryptor->SetFragmentInfo(m_poolId, m_defaultKey,
                                                m_codecHandler->naluLengthSize,
-                                               m_codecHandler->extra_data, m_decrypterCaps.flags);
+                                               m_codecHandler->extra_data, m_decrypterCaps.flags, m_sampleFormat);
 
     return AP4_SUCCESS;
   }
@@ -1480,6 +1480,8 @@ private:
         break;
     }
 
+    m_sampleFormat = desc->GetFormat();
+
     if ((m_decrypterCaps.flags & SSD::SSD_DECRYPTER::SSD_CAPS::SSD_ANNEXB_REQUIRED) != 0)
       m_codecHandler->ExtraDataToAnnexB();
   }
@@ -1492,6 +1494,7 @@ private:
   SSD::SSD_DECRYPTER::SSD_CAPS m_decrypterCaps;
   unsigned int m_failCount;
   AP4_UI32 m_poolId;
+  AP4_UI32 m_sampleFormat;
 
   bool m_eos, m_started;
   int64_t m_dts, m_pts, m_ptsDiff;
