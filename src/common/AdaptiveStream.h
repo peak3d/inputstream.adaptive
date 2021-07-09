@@ -90,6 +90,8 @@ namespace adaptive
     bool write_data(const void *buffer, size_t buffer_size);
     bool prepareDownload(const AdaptiveTree::Segment *seg);
     adaptive::AdaptiveTree& GetTree() { return tree_; };
+    virtual void SetLastUpdated(std::chrono::system_clock::time_point tm){};
+    std::chrono::time_point<std::chrono::system_clock> lastUpdated_;
 
   private:
     // Segment download section
@@ -139,7 +141,6 @@ namespace adaptive
     std::size_t segment_read_pos_;
     uint64_t absolute_position_;
     uint64_t currentPTSOffset_, absolutePTSOffset_;
-    std::chrono::time_point<std::chrono::system_clock> lastUpdated_;
 
     uint16_t width_, height_;
     uint32_t bandwidth_;
