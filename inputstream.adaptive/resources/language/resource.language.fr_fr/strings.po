@@ -19,17 +19,17 @@ msgstr "Général"
 # The minimum bandwidth which should not be deceeded.
 msgctxt "#30101"
 msgid "Min. Bandwidth (Bit/s)"
-msgstr "La bande passante minimale qui ne devrait pas être réduite."
+msgstr "Bande passante minimale (Bit/s)"
 
 # The maximum bandwidth which should not be exceeded. 0=unlimited
 msgctxt "#30102"
 msgid "Max. Bandwidth (Bit/s)"
-msgstr "La bande passante maximale qui ne devrait pas être dépassée. 0=illimitée"
+msgstr "Bande passante maximale (Bit/s) (0=illimitée)"
 
 # Absolute path to the folder containing the decrypters
 msgctxt "#30103"
 msgid "Decrypter path"
-msgstr "Chemin absolu du répertoire contenant le décodeur"
+msgstr "Dossier contenant le binaire de déchiffrement"
 
 # Maximum Resolution
 msgctxt "#30110"
@@ -38,7 +38,7 @@ msgstr "Résolution maximale du décodeur"
 
 msgctxt "#30111"
 msgid "Stream Selection"
-msgstr "Sélection du flux"
+msgstr "Mode de sélection des flux"
 
 msgctxt "#30112"
 msgid "Media"
@@ -47,17 +47,17 @@ msgstr "Média"
 # Maximum allowed resolution if decoded through secure path
 msgctxt "#30113"
 msgid "Max. Resolution secure decoder"
-msgstr "Résolution maximale autorisée si le décodage est réalisé par une voie sécurisée"
+msgstr "Résolution maximale autorisée si le décodage est réalisé par un élément sécurisé"
 
 # Select streams without respecting HDCP status
 msgctxt "#30114"
 msgid "Override HDCP status"
-msgstr "Sélection du flux sans tenir compte du status HDCP"
+msgstr "Sélection des flux sans tenir compte du status HDCP"
 
 # Do not respect display resolution when selecting streams
 msgctxt "#30115"
 msgid "Ignore Display Resolution"
-msgstr "Ne pas tenir compte de la résolution d'écran lors de la sélection du flux"
+msgstr "Ne pas tenir compte de la résolution d'écran lors de la sélection des flux"
 
 msgctxt "#30120"
 msgid "Expert"
@@ -89,11 +89,11 @@ msgstr "1080p"
 
 msgctxt "#30155"
 msgid "Automatically select streams"
-msgstr ""
+msgstr "Sélection automatique des flux"
 
 msgctxt "#30156"
 msgid "Manually select all streams"
-msgstr ""
+msgstr "Sélection manuelle des flux"
 
 msgctxt "#30157"
 msgid "All"
@@ -110,8 +110,8 @@ msgstr "Vidéo"
 # Show all video streams
 msgctxt "#30160"
 msgid "Manually select video stream"
-msgstr ""
+msgstr "Sélection manuelle du flux vidéo"
 
 msgctxt "#30161"
 msgid "Video + Subtitles"
-msgstr ""
+msgstr "Vidéo + Sous-titres"
