@@ -32,7 +32,7 @@ subdirs (
 if(CORE_SYSTEM_NAME STREQUAL android)
   subdirs ( jni )
   add_library ( ssd_wv SHARED
-	wvdecrypter_android_jni.cpp
+	wvdecrypter_android.cpp
 	jsmn.c
 	../src/helpers.cpp
   ../src/md5.cpp
