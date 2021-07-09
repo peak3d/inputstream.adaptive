@@ -89,11 +89,11 @@ msgstr "1080p"
 
 msgctxt "#30155"
 msgid "Automatically select streams"
-msgstr ""
+msgstr "Αυτόματη επιλογή ροών"
 
 msgctxt "#30156"
 msgid "Manually select all streams"
-msgstr ""
+msgstr "Χειροκίνητη επιλογή όλων των ροών"
 
 msgctxt "#30157"
 msgid "All"
@@ -110,7 +110,7 @@ msgstr "Βίντεο"
 # Show all video streams
 msgctxt "#30160"
 msgid "Manually select video stream"
-msgstr ""
+msgstr "Χειροκίνητη επιλογή ροής βίντεο"
 
 msgctxt "#30161"
 msgid "Video + Subtitles"
