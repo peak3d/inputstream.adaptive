@@ -472,9 +472,9 @@ static void XMLCALL start(void* data, const char* el, const char** attr)
               else if (strcmp((const char*)*attr, "indexRangeExact") == 0 &&
                        strcmp((const char*)*(attr + 1), "true") == 0)
                 dash->current_representation_->flags_ |= DASHTree::Representation::INDEXRANGEEXACT;
-              dash->current_representation_->flags_ |= DASHTree::Representation::SEGMENTBASE;
               attr += 2;
             }
+            dash->current_representation_->flags_ |= DASHTree::Representation::SEGMENTBASE;
             if (dash->current_representation_->indexRangeMax_)
               dash->currentNode_ |= MPDNODE_SEGMENTLIST;
           }
@@ -1301,6 +1301,18 @@ static void XMLCALL end(void* data, const char* el)
                                   dash->current_representation_->id,
                                   dash->current_representation_->bandwidth_);
             }
+
+            if ((dash->current_representation_->flags_ & DASHTree::Representation::SEGMENTBASE) &&
+              dash->current_representation_->indexRangeMin_ == 0 && dash->current_representation_->indexRangeMax_ > 0
+              && !(dash->current_representation_->flags_ & DASHTree::Representation::INITIALIZATION))
+            {
+              // AdaptiveStream::ParseIndexRange will fix the initialization max to its real value.
+              dash->current_representation_->flags_ |= DASHTree::Representation::INITIALIZATION;
+              dash->current_representation_->initialization_.range_begin_ = 0;
+              dash->current_representation_->initialization_.range_end_ =
+                  dash->current_representation_->indexRangeMax_;
+            }
+
 
             if ((dash->current_representation_->flags_ &
                  AdaptiveTree::Representation::INITIALIZATION) == 0 &&
