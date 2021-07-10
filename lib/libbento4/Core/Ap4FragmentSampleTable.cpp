@@ -225,7 +225,8 @@ AP4_FragmentSampleTable::AddTrun(AP4_TrunAtom*   trun,
         
         // dts and cts
         sample.SetDts(dts);
-        if (trun_flags & AP4_TRUN_FLAG_SAMPLE_COMPOSITION_TIME_OFFSET_PRESENT) {
+        if (trun_flags & AP4_TRUN_FLAG_SAMPLE_COMPOSITION_TIME_OFFSET_PRESENT)
+        {
             sample.SetCtsDelta(entry.sample_composition_time_offset);
         }
         

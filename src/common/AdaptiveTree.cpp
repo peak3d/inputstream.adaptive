@@ -37,6 +37,18 @@ namespace adaptive
       range_begin_ = range_end_ = 0;
   }
 
+  void AdaptiveTree::Segment::Copy(const Segment* src)
+  {
+    delete[] url, url = nullptr;
+    *this = *src;
+    if (src->url)
+    {
+      size_t len = strlen(src->url) + 1;
+      url = new char[len];
+      memcpy((void*)url, src->url, len);
+    }
+  }
+
   AdaptiveTree::AdaptiveTree()
     : current_period_(nullptr)
     , next_period_(nullptr)
@@ -50,8 +62,6 @@ namespace adaptive
     , minPresentationOffset(0)
     , has_timeshift_buffer_(false)
     , has_overall_seconds_(false)
-    , download_speed_(0.0)
-    , average_download_speed_(0.0f)
     , updateInterval_(~0)
     , updateThread_(nullptr)
     , lastUpdated_(std::chrono::system_clock::now())
@@ -109,20 +119,9 @@ namespace adaptive
     return static_cast<uint32_t>((overallSeconds_ / duration)*1.01);
   }
 
-  void AdaptiveTree::set_download_speed(double speed)
-  {
-    std::lock_guard<std::mutex> lck(treeMutex_);
-
-    download_speed_ = speed;
-    if (!average_download_speed_)
-      average_download_speed_ = download_speed_;
-    else
-      average_download_speed_ = average_download_speed_*0.9 + download_speed_*0.1;
-  };
-
   void AdaptiveTree::SetFragmentDuration(const AdaptationSet* adp, const Representation* rep, size_t pos, uint64_t timestamp, uint32_t fragmentDuration, uint32_t movie_timescale)
   {
-    if (!has_timeshift_buffer_ || !update_parameter_.empty() ||
+    if (!has_timeshift_buffer_ || HasUpdateThread() ||
       (rep->flags_ & AdaptiveTree::Representation::URLSEGMENTS) != 0)
       return;
 
