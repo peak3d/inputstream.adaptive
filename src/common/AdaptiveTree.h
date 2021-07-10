@@ -454,7 +454,8 @@ public:
   AdaptiveTree();
   virtual ~AdaptiveTree();
 
-  virtual bool open(const std::string &url, const std::string &manifestUpdateParam) = 0;
+  virtual bool open(const std::string& url, const std::string& manifestUpdateParam) = 0;
+  virtual bool open(const std::string& url, const std::string& manifestUpdateParam, std::map<std::string, std::string> additionalHeaders) = 0;
   virtual PREPARE_RESULT prepareRepresentation(Period* period,
                                                AdaptationSet* adp,
                                                Representation* rep,

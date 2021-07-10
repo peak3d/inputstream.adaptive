@@ -158,8 +158,14 @@ int HLSTree::processEncryption(std::string baseUrl, std::map<std::string, std::s
 
 bool HLSTree::open(const std::string& url, const std::string& manifestUpdateParam)
 {
+  return open(url, manifestUpdateParam, std::map<std::string, std::string>());
+}
+
+bool HLSTree::open(const std::string& url, const std::string& manifestUpdateParam, std::map<std::string, std::string> additionalHeaders)
+{
   PrepareManifestUrl(url, manifestUpdateParam);
-  if (download(manifest_url_.c_str(), manifest_headers_, &manifest_stream))
+  additionalHeaders.insert(manifest_headers_.begin(), manifest_headers_.end());
+  if (download(manifest_url_.c_str(), additionalHeaders, &manifest_stream))
     return processManifest(manifest_stream);
   return false;
 }

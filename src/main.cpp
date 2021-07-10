@@ -1982,7 +1982,8 @@ Session::Session(MANIFEST_TYPE manifestType,
                  uint16_t display_height,
                  const std::string& ov_audio,
                  bool play_timeshift_buffer,
-                 bool force_secure_decoder)
+                 bool force_secure_decoder,
+                 const std::string& drmPreInitData)
   : manifest_type_(manifestType),
     manifestURL_(strURL),
     manifestUpdateParam_(strUpdateParam),
@@ -2005,7 +2006,8 @@ Session::Session(MANIFEST_TYPE manifestType,
     chapter_start_time_(0),
     chapter_seek_time_(0.0),
     play_timeshift_buffer_(play_timeshift_buffer),
-    force_secure_decoder_(force_secure_decoder)
+    force_secure_decoder_(force_secure_decoder),
+    drmPreInitData_(drmPreInitData)
 {
   switch (manifest_type_)
   {
@@ -2222,10 +2224,31 @@ bool Session::Initialize(const std::uint8_t config, uint32_t max_user_bandwidth)
     kodi::Log(ADDON_LOG_DEBUG, "Supported URN: %s", adaptiveTree_->supportedKeySystem_.c_str());
   }
 
+  // Preinitialize the DRM, if pre-initialisation data are provided
+  std::map<std::string, std::string> additionalHeaders = std::map<std::string, std::string>();
+
+  if (!drmPreInitData_.empty())
+  {
+    std::string challengeB64;
+    std::string sessionId;
+    // Pre-initialize the DRM allow to generate the challenge and session ID data 
+    // used to make licensed manifest requests (via proxy callback)
+    if (PreInitializeDRM(challengeB64, sessionId))
+    {
+      additionalHeaders["challengeB64"] = challengeB64;
+      additionalHeaders["sessionId"] = sessionId;
+    }
+    else
+    {
+      kodi::Log(ADDON_LOG_ERROR, "%s - DRM pre-initialization failed", __FUNCTION__);
+      return false;
+    }
+  }
+
   // Open manifest file with location redirect support  bool mpdSuccess;
   std::string manifestUrl =
       adaptiveTree_->location_.empty() ? manifestURL_.c_str() : adaptiveTree_->location_;
-  if (!adaptiveTree_->open(manifestUrl.c_str(), manifestUpdateParam_.c_str()) || adaptiveTree_->empty())
+  if (!adaptiveTree_->open(manifestUrl.c_str(), manifestUpdateParam_.c_str(), additionalHeaders) || adaptiveTree_->empty())
   {
     kodi::Log(ADDON_LOG_ERROR, "Could not open / parse manifest (%s)", manifestUrl.c_str());
     return false;
@@ -2240,6 +2263,91 @@ bool Session::Initialize(const std::uint8_t config, uint32_t max_user_bandwidth)
   maxUserBandwidth_ = max_user_bandwidth;
 
   return InitializePeriod();
+}
+
+bool Session::PreInitializeDRM(std::string& challengeB64, std::string& sessionId)
+{
+    std::string psshData;
+    std::string kidData;
+    // Parse the PSSH/KID data
+    std::string::size_type posSplitter(drmPreInitData_.find("|"));
+    if (posSplitter != std::string::npos)
+    {
+      psshData = drmPreInitData_.substr(0, posSplitter);
+      kidData = drmPreInitData_.substr(posSplitter + 1);
+    }
+
+    if (psshData.empty() || kidData.empty())
+    {
+      kodi::Log(ADDON_LOG_ERROR, "%s - Invalid DRM pre-init data, must be as: {PSSH as base64}|{KID as base64}", __FUNCTION__);
+      return false;
+    }
+
+    cdm_sessions_.resize(2);
+    memset(&cdm_sessions_.front(), 0, sizeof(CDMSESSION));
+    // Try to initialize an SingleSampleDecryptor
+    kodi::Log(ADDON_LOG_DEBUG, "%s - Entering encryption section", __FUNCTION__);
+
+    if (license_key_.empty())
+    {
+      kodi::Log(ADDON_LOG_ERROR, "%s - Invalid license_key", __FUNCTION__);
+      return false;
+    }
+
+    if (!decrypter_)
+    {
+      kodi::Log(ADDON_LOG_ERROR, "%s - No decrypter found for encrypted stream", __FUNCTION__);
+      return false;
+    }
+
+    if (!decrypter_->HasCdmSession())
+    {
+      if (!decrypter_->OpenDRMSystem(license_key_.c_str(), server_certificate_, drmConfig_))
+      {
+        kodi::Log(ADDON_LOG_ERROR, "%s - OpenDRMSystem failed", __FUNCTION__);
+        return false;
+      }
+    }
+
+    AP4_DataBuffer init_data;
+    const char* optionalKeyParameter(nullptr);
+
+    // Set the provided PSSH
+    init_data.SetBufferSize(1024);
+    unsigned int init_data_size(1024);
+
+    b64_decode(psshData.c_str(), psshData.size(), init_data.UseData(), init_data_size);
+    init_data.SetDataSize(init_data_size);
+
+    // Decode the provided KID
+    uint8_t buffer[32];
+    unsigned int buffer_size(32);
+    b64_decode(kidData.c_str(), kidData.size(), buffer, buffer_size);
+    const char* decodedKid = reinterpret_cast<const char*>(buffer);
+
+    CDMSESSION& session(cdm_sessions_[1]);
+
+    char hexkid[36];
+    AP4_FormatHex(reinterpret_cast<const AP4_UI08*>(decodedKid), 16, hexkid), hexkid[32] = 0;
+    kodi::Log(ADDON_LOG_DEBUG, "%s - Initializing session with KID: %s", __FUNCTION__, hexkid);
+
+    if (decrypter_ && init_data.GetDataSize() >= 4 &&
+        (session.single_sample_decryptor_ = decrypter_->CreateSingleSampleDecrypter(
+             init_data, optionalKeyParameter, (const uint8_t*)decodedKid, true)) != 0)
+    {
+      session.cdm_session_str_ = session.single_sample_decryptor_->GetSessionId();
+      sessionId = session.cdm_session_str_;
+      challengeB64 = decrypter_->GetChallengeB64Data(session.single_sample_decryptor_);
+    }
+    else
+    {
+      kodi::Log(ADDON_LOG_ERROR, "%s - Initialize failed (SingleSampleDecrypter)", __FUNCTION__);
+      cdm_sessions_[1].single_sample_decryptor_ = nullptr;
+      return false;
+    }
+
+  DisposeSampleDecrypter();
+  return true;
 }
 
 bool Session::InitializeDRM()
@@ -2459,7 +2567,7 @@ bool Session::InitializeDRM()
       if (decrypter_ && init_data.GetDataSize() >= 4 &&
           (session.single_sample_decryptor_ ||
            (session.single_sample_decryptor_ = decrypter_->CreateSingleSampleDecrypter(
-                init_data, optionalKeyParameter, (const uint8_t*)defkid)) != 0))
+                init_data, optionalKeyParameter, (const uint8_t*)defkid, false)) != 0))
       {
 
         decrypter_->GetCapabilities(session.single_sample_decryptor_, (const uint8_t*)defkid,
@@ -3325,7 +3433,7 @@ bool CInputStreamAdaptive::Open(const kodi::addon::InputstreamProperty& props)
 {
   kodi::Log(ADDON_LOG_DEBUG, "Open()");
 
-  std::string lt, lk, ld, lsc, mfup, ov_audio;
+  std::string lt, lk, ld, lsc, mfup, ov_audio, drmPreInitData;
   std::map<std::string, std::string> manh, medh;
   std::string url = props.GetURL();
   MANIFEST_TYPE manifest(MANIFEST_TYPE_UNKNOWN);
@@ -3401,7 +3509,19 @@ bool CInputStreamAdaptive::Open(const kodi::addon::InputstreamProperty& props)
                 max_user_bandwidth);
     }
     else if (prop.first == "inputstream.adaptive.play_timeshift_buffer")
+    {
       m_playTimeshiftBuffer = stricmp(prop.second.c_str(), "true") == 0;
+    }
+    else if (prop.first == "inputstream.adaptive.pre_init_data")
+    {
+      // This property allow to "pre-initialize" the DRM with a PSSH/KID,
+      // the property value must be as "{PSSH as base64}|{KID as base64}".
+      // The challenge/session ID data generated by the initialisation of the DRM
+      // will be attached to the manifest request callback
+      // as HTTP headers with the names of "challengeB64" and "sessionId".
+      kodi::Log(ADDON_LOG_DEBUG, "found inputstream.adaptive.pre_init_data: [not shown]");
+      drmPreInitData = prop.second;
+    }
   }
 
   if (manifest == MANIFEST_TYPE_UNKNOWN)
@@ -3423,10 +3543,9 @@ bool CInputStreamAdaptive::Open(const kodi::addon::InputstreamProperty& props)
 
   kodihost->SetProfilePath(props.GetProfileFolder());
 
-  m_session = std::shared_ptr<Session>(new Session(manifest, url.c_str(), mfup, lt, lk, ld, lsc,
-                                                   manh, medh, props.GetProfileFolder(),
-                                                   m_width, m_height, ov_audio,
-                                                   m_playTimeshiftBuffer, force_secure_decoder));
+  m_session = std::shared_ptr<Session>(new Session(
+      manifest, url.c_str(), mfup, lt, lk, ld, lsc, manh, medh, props.GetProfileFolder(), m_width,
+      m_height, ov_audio, m_playTimeshiftBuffer, force_secure_decoder, drmPreInitData));
   m_session->SetVideoResolution(m_width, m_height);
 
   if (!m_session->Initialize(config, max_user_bandwidth))

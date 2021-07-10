@@ -21,7 +21,7 @@ namespace SSD
     {
       PROPERTY_HEADER
   };
-    static const uint32_t version = 12;
+    static const uint32_t version = 13;
 #if defined(ANDROID)
     virtual void* GetJNIEnv() = 0;
     virtual int GetSDKVersion() = 0;
@@ -182,12 +182,13 @@ namespace SSD
     // Return supported URN if type matches to capabilities, otherwise null
     virtual const char *SelectKeySytem(const char* keySystem) = 0;
     virtual bool OpenDRMSystem(const char *licenseURL, const AP4_DataBuffer &serverCertificate, const uint8_t config) = 0;
-    virtual AP4_CencSingleSampleDecrypter *CreateSingleSampleDecrypter(AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t *defaultkeyid) = 0;
+    virtual AP4_CencSingleSampleDecrypter *CreateSingleSampleDecrypter(AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t *defaultkeyid, bool skipSessionMessage) = 0;
     virtual void DestroySingleSampleDecrypter(AP4_CencSingleSampleDecrypter* decrypter) = 0;
 
     virtual void GetCapabilities(AP4_CencSingleSampleDecrypter* decrypter, const uint8_t *keyid, uint32_t media, SSD_DECRYPTER::SSD_CAPS &caps) = 0;
     virtual bool HasLicenseKey(AP4_CencSingleSampleDecrypter* decrypter, const uint8_t *keyid) = 0;
     virtual bool HasCdmSession() = 0;
+    virtual std::string GetChallengeB64Data(AP4_CencSingleSampleDecrypter* decrypter) = 0;
 
     virtual bool OpenVideoDecoder(AP4_CencSingleSampleDecrypter* decrypter, const SSD_VIDEOINITDATA *initData) = 0;
     virtual SSD_DECODE_RETVAL DecodeVideo(void* instance, SSD_SAMPLE *sample, SSD_PICTURE *picture) = 0;

@@ -328,9 +328,14 @@ void CdmAdapter::UpdateSession(uint32_t promise_id,
       response, response_size);
 }
 
-void CdmAdapter::SetSessionActive()
+void CdmAdapter::SetSessionActive(bool isActive)
 {
-  session_active_ = true;
+  session_active_ = isActive;
+}
+
+bool CdmAdapter::IsSessionActive()
+{
+  return session_active_;
 }
 
 void CdmAdapter::CloseSession(uint32_t promise_id,

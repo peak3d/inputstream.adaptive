@@ -1558,6 +1558,11 @@ static void XMLCALL end(void* data, const char* el)
 +---------------------------------------------------------------------*/
 bool DASHTree::open(const std::string& url, const std::string& manifestUpdateParam)
 {
+  return open(url, manifestUpdateParam, std::map<std::string, std::string>());
+}
+
+bool DASHTree::open(const std::string& url, const std::string& manifestUpdateParam, std::map<std::string, std::string> additionalHeaders)
+{
   parser_ = XML_ParserCreate(NULL);
   if (!parser_)
     return false;
@@ -1569,7 +1574,8 @@ bool DASHTree::open(const std::string& url, const std::string& manifestUpdatePar
   strXMLText_.clear();
 
   PrepareManifestUrl(url, manifestUpdateParam);
-  bool ret = download(manifest_url_.c_str(), manifest_headers_) && !periods_.empty();
+  additionalHeaders.insert(manifest_headers_.begin(), manifest_headers_.end());
+  bool ret = download(manifest_url_.c_str(), additionalHeaders) && !periods_.empty();
 
   XML_ParserFree(parser_);
   parser_ = 0;

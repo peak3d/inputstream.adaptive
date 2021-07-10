@@ -94,9 +94,11 @@ public:
           uint16_t display_height,
           const std::string& ov_audio,
           bool play_timeshift_buffer,
-          bool force_secure_decoder);
+          bool force_secure_decoder,
+          const std::string& drm_preinit_data);
   virtual ~Session();
   bool Initialize(const std::uint8_t config, uint32_t max_user_bandwidth);
+  bool PreInitializeDRM(std::string& challengeB64, std::string& sessionId);
   bool InitializeDRM();
   bool InitializePeriod();
   SampleReader *GetNextSample();
@@ -177,6 +179,7 @@ private:
   MANIFEST_TYPE manifest_type_;
   std::string manifestURL_, manifestUpdateParam_;
   std::string license_key_, license_type_, license_data_;
+  std::string drmPreInitData_;
   std::map<std::string, std::string> media_headers_;
   AP4_DataBuffer server_certificate_;
   std::string profile_path_;

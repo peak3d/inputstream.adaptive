@@ -10,7 +10,7 @@
     name="adaptive"
     extension=""
     tags="true"
-    listitemprops="license_type|license_key|license_data|license_flags|manifest_type|server_certificate|stream_headers|manifest_update_parameter|original_audio_language|max_bandwidth|play_timeshift_buffer"
+    listitemprops="license_type|license_key|license_data|license_flags|manifest_type|server_certificate|stream_headers|manifest_update_parameter|original_audio_language|max_bandwidth|play_timeshift_buffer|pre_init_data"
     library_@PLATFORM@="@LIBRARY_FILENAME@"/>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">InputStream client for adaptive streams</summary>

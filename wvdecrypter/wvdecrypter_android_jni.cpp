@@ -279,9 +279,10 @@ public:
   WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t* defaultKeyId);
   ~WV_CencSingleSampleDecrypter();
 
-  bool StartSession() { return KeyUpdateRequest(true); };
+  bool StartSession(bool skipSessionMessage) { return KeyUpdateRequest(true, skipSessionMessage); };
   const std::vector<char> &GetSessionIdRaw() { return session_id_; };
   virtual const char *GetSessionId() override;
+  std::vector<char> GetChallengeData();
   virtual bool HasLicenseKey(const uint8_t *keyid);
 
   virtual AP4_Result SetFragmentInfo(AP4_UI32 pool_id, const AP4_UI08 *key, const AP4_UI08 nal_length_size, AP4_DataBuffer &annexb_sps_pps, AP4_UI32 flags)override;
@@ -310,7 +311,8 @@ public:
 
 private:
   bool ProvisionRequest();
-  bool KeyUpdateRequest(bool waitForKeys);
+  bool GetKeyRequest(std::vector<char>& keyRequestData);
+  bool KeyUpdateRequest(bool waitForKeys, bool skipSessionMessage);
   bool SendSessionMessage(const std::vector<char> &keyRequestData);
 
   WV_DRM &media_drm_;
@@ -319,6 +321,7 @@ private:
 
   std::vector<char> session_id_;
   std::vector<char> keySetId_;
+  std::vector<char> keyRequestData_;
 
   char session_id_char_[128];
   bool provisionRequested, keyUpdateRequested;
@@ -477,6 +480,11 @@ const char *WV_CencSingleSampleDecrypter::GetSessionId()
   return session_id_char_;
 }
 
+std::vector<char> WV_CencSingleSampleDecrypter::GetChallengeData()
+{
+  return keyRequestData_;
+}
+
 bool WV_CencSingleSampleDecrypter::HasLicenseKey(const uint8_t *keyid)
 {
   // We work with one session for all streams.
@@ -550,12 +558,10 @@ bool WV_CencSingleSampleDecrypter::ProvisionRequest()
   return true;
 }
 
-bool WV_CencSingleSampleDecrypter::KeyUpdateRequest(bool waitKeys)
+bool WV_CencSingleSampleDecrypter::GetKeyRequest(std::vector<char>& keyRequestData)
 {
-  keyUpdateRequested = false;
-
-  jni::CJNIMediaDrmKeyRequest keyRequest = media_drm_.GetMediaDrm()->getKeyRequest(session_id_, pssh_,
-    "video/mp4", jni::CJNIMediaDrm::KEY_TYPE_STREAMING, optParams_);
+  jni::CJNIMediaDrmKeyRequest keyRequest = media_drm_.GetMediaDrm()->getKeyRequest(
+      session_id_, pssh_, "video/mp4", jni::CJNIMediaDrm::KEY_TYPE_STREAMING, optParams_);
 
   if (xbmc_jnienv()->ExceptionCheck())
   {
@@ -564,29 +570,40 @@ bool WV_CencSingleSampleDecrypter::KeyUpdateRequest(bool waitKeys)
     {
       Log(SSD_HOST::LL_INFO, "Key request not successful - trying provisioning");
       provisionRequested = true;
-      return KeyUpdateRequest(waitKeys);
+      return GetKeyRequest(keyRequestData);
     }
     else
       Log(SSD_HOST::LL_ERROR, "Key request not successful");
     return false;
   }
 
+  keyRequestData = keyRequest.getData();
+  Log(SSD_HOST::LL_DEBUG, "Key request successful size: %lu", keyRequestData.size());
+  return true;
+}
+
+bool WV_CencSingleSampleDecrypter::KeyUpdateRequest(bool waitKeys, bool skipSessionMessage)
+{
+  if (!GetKeyRequest(keyRequestData_))
+    return false;
+
   pssh_.clear();
   optParams_.clear();
 
-  std::vector<char> keyRequestData = keyRequest.getData();
-  Log(SSD_HOST::LL_DEBUG, "Key request successful size: %lu", keyRequestData.size());
+  if (skipSessionMessage)
+    return true;
 
-  if (!SendSessionMessage(keyRequestData))
+  keyUpdateRequested = false;
+  if (!SendSessionMessage(keyRequestData_))
     return false;
 
-  if (waitKeys && keyRequestData.size() == 2) // Service Certificate call
+  if (waitKeys && keyRequestData_.size() == 2) // Service Certificate call
   {
     for (unsigned int i(0); i < 100 && !keyUpdateRequested; ++i)
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     if (keyUpdateRequested)
-      KeyUpdateRequest(false);
+      KeyUpdateRequest(false, false);
     else
     {
       Log(SSD_HOST::LL_ERROR, "Timeout waiting for EVENT_KEYS_REQUIRED!");
@@ -999,7 +1016,7 @@ AP4_Result WV_CencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 pool_id, const
   fragment_pool_[pool_id].decrypter_flags_ = flags;
 
   if (keyUpdateRequested)
-    KeyUpdateRequest(false);
+    KeyUpdateRequest(false, false);
 
   return AP4_SUCCESS;
 }
@@ -1236,7 +1253,7 @@ public:
     return cdmsession_->GetMediaDrm();
   }
 
-  virtual AP4_CencSingleSampleDecrypter *CreateSingleSampleDecrypter(AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t *defaultkeyid) override
+  virtual AP4_CencSingleSampleDecrypter *CreateSingleSampleDecrypter(AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t *defaultkeyid, bool skipSessionMessage) override
   {
     WV_CencSingleSampleDecrypter *decrypter = new WV_CencSingleSampleDecrypter(*cdmsession_, pssh, optionalKeyParameter, defaultkeyid);
 
@@ -1245,7 +1262,7 @@ public:
       decrypterList.push_back(decrypter);
     }
 
-    if (!(*decrypter->GetSessionId() && decrypter->StartSession()))
+    if (!(*decrypter->GetSessionId() && decrypter->StartSession(skipSessionMessage)))
     {
       DestroySingleSampleDecrypter(decrypter);
       return nullptr;
@@ -1280,6 +1297,16 @@ public:
     if (decrypter)
       return static_cast<WV_CencSingleSampleDecrypter*>(decrypter)->HasLicenseKey(keyid);
     return false;
+  }
+
+  virtual std::string GetChallengeB64Data(AP4_CencSingleSampleDecrypter* decrypter) override
+  {
+    if (!decrypter)
+      return nullptr;
+
+    std::vector<char> challengeData = static_cast<WV_CencSingleSampleDecrypter*>(decrypter)->GetChallengeData();
+    // Keep b64_encode urlEncode enabled otherwise the data will not be sent correctly in the HTTP header
+    return b64_encode(reinterpret_cast<const uint8_t*>(challengeData.data()), challengeData.size(), true);
   }
 
   virtual bool HasCdmSession() 

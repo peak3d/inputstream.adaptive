@@ -169,13 +169,15 @@ class WV_CencSingleSampleDecrypter : public AP4_CencSingleSampleDecrypter
 {
 public:
   // methods
-  WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_DataBuffer &pssh, const uint8_t *defaultKeyId);
+  WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_DataBuffer &pssh, const uint8_t *defaultKeyId, bool skipSessionMessage);
   virtual ~WV_CencSingleSampleDecrypter();
 
   void GetCapabilities(const uint8_t* key, uint32_t media, SSD_DECRYPTER::SSD_CAPS &caps);
   virtual const char *GetSessionId() override;
   void SetSessionActive();
   void CloseSessionId();
+  AP4_DataBuffer GetChallengeData();
+
   void SetSession(const char* session, uint32_t session_size, const uint8_t *data, size_t data_size)
   {
     std::lock_guard<std::mutex> lock(renewal_lock_);
@@ -403,7 +405,7 @@ void WV_DRM::OnCDMMessage(const char* session, uint32_t session_size, CDMADPMSG 
 |   WV_CencSingleSampleDecrypter::WV_CencSingleSampleDecrypter
 +---------------------------------------------------------------------*/
 
-WV_CencSingleSampleDecrypter::WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_DataBuffer &pssh, const uint8_t *defaultKeyId)
+WV_CencSingleSampleDecrypter::WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_DataBuffer &pssh, const uint8_t *defaultKeyId, bool skipSessionMessage)
   : AP4_CencSingleSampleDecrypter(0)
   , drm_(drm)
   , pssh_(pssh)
@@ -469,7 +471,7 @@ WV_CencSingleSampleDecrypter::WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_Data
     reinterpret_cast<const uint8_t *>(pssh_.GetData()), pssh_.GetDataSize());
 
   int retrycount=0;
-  while (session_.empty() && ++retrycount < 100)
+  while (!drm.GetCdmAdapter()->IsSessionActive() && ++retrycount < 100)
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   if (session_.empty())
@@ -477,6 +479,9 @@ WV_CencSingleSampleDecrypter::WV_CencSingleSampleDecrypter(WV_DRM &drm, AP4_Data
     Log(SSD_HOST::LL_ERROR, "License update not successful (no session)");
     return;
   }
+
+  if (skipSessionMessage)
+    return;
 
   while (challenge_.GetDataSize() > 0 && SendSessionMessage());
 
@@ -578,7 +583,7 @@ const char *WV_CencSingleSampleDecrypter::GetSessionId()
 
 void WV_CencSingleSampleDecrypter::SetSessionActive()
 {
-  drm_.GetCdmAdapter()->SetSessionActive();
+  drm_.GetCdmAdapter()->SetSessionActive(true);
 }
 
 void WV_CencSingleSampleDecrypter::CloseSessionId()
@@ -591,6 +596,11 @@ void WV_CencSingleSampleDecrypter::CloseSessionId()
 
     Log(SSD_HOST::LL_DEBUG, "%s: session closed", __func__);
   }
+}
+
+AP4_DataBuffer WV_CencSingleSampleDecrypter::GetChallengeData()
+{
+  return challenge_;
 }
 
 void WV_CencSingleSampleDecrypter::CheckLicenseRenewal()
@@ -1424,9 +1434,9 @@ public:
     return cdmsession_->GetCdmAdapter() != nullptr;
   }
 
-  virtual AP4_CencSingleSampleDecrypter *CreateSingleSampleDecrypter(AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t *defaultkeyid) override
+  virtual AP4_CencSingleSampleDecrypter *CreateSingleSampleDecrypter(AP4_DataBuffer &pssh, const char *optionalKeyParameter, const uint8_t *defaultkeyid, bool skipSessionMessage) override
   {
-    WV_CencSingleSampleDecrypter *decrypter = new WV_CencSingleSampleDecrypter(*cdmsession_, pssh, defaultkeyid);
+    WV_CencSingleSampleDecrypter *decrypter = new WV_CencSingleSampleDecrypter(*cdmsession_, pssh, defaultkeyid, skipSessionMessage);
     if (!decrypter->GetSessionId())
     {
       delete decrypter;
@@ -1466,6 +1476,16 @@ public:
   virtual bool HasCdmSession() 
   { 
     return cdmsession_ != nullptr; 
+  }
+
+  virtual std::string GetChallengeB64Data(AP4_CencSingleSampleDecrypter* decrypter) override
+  {
+    if (!decrypter)
+      return nullptr;
+
+    AP4_DataBuffer challengeData = static_cast<WV_CencSingleSampleDecrypter*>(decrypter)->GetChallengeData();
+    // Keep b64_encode urlEncode enabled otherwise the data will not be sent correctly in the HTTP header
+    return b64_encode(challengeData.GetData(), challengeData.GetDataSize(), true);
   }
 
   virtual bool OpenVideoDecoder(AP4_CencSingleSampleDecrypter* decrypter, const SSD_VIDEOINITDATA *initData) override

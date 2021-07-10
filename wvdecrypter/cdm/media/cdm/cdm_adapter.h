@@ -101,7 +101,9 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 		const uint8_t* response,
 		uint32_t response_size);
 
-	void SetSessionActive();
+	void SetSessionActive(bool isActive);
+
+  bool IsSessionActive();
 
 	void CloseSession(uint32_t promise_id,
 		const char* session_id,
